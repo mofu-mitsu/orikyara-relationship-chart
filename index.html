@@ -11,7 +11,6 @@
   <meta property="og:title" content="オリキャラ相関図メーカー">
   <meta property="og:description" content="うちの子の関係性を可視化！自由に配置して繋げる相関図ツール♡">
   <meta property="og:type" content="website">
-  <!-- ↓ URL変更してね -->
   <meta property="og:url" content="https://mofu-mitsu.github.io/orikyara-relationship-chart/">
   <meta property="og:image" content="https://mofu-mitsu.github.io/orikyara-relationship-chart/ogp.png">
   <meta name="twitter:card" content="summary_large_image">
@@ -45,7 +44,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      touch-action: manipulation; /* スマホでの操作性向上 */
+      touch-action: manipulation;
     }
 
     h1 {
@@ -71,9 +70,18 @@
       box-shadow: 0 4px 10px rgba(0,0,0,0.05);
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 15px;
       justify-content: center;
       align-items: center;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: #f9f9f9;
+      padding: 5px 10px;
+      border-radius: 20px;
     }
 
     .btn {
@@ -97,7 +105,6 @@
     .btn-line.active { background: #5a96ff; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); }
     .btn-reset { background: #ccc; font-size: 0.8rem; }
 
-    /* ファイル入力は隠してラベルで操作 */
     #fileInput { display: none; }
     .file-label {
       background: #ffb7c5;
@@ -113,35 +120,41 @@
     }
     .file-label:hover { opacity: 0.9; }
 
+    /* サイズスライダー */
+    input[type="range"] {
+      width: 80px;
+      cursor: pointer;
+    }
+
     /* === 相関図ボードエリア === */
     #boardContainer {
       width: 95%;
       max-width: 800px;
-      height: 600px; /* ボードの高さ */
+      height: 600px;
       background: var(--board-color);
       border: 4px solid var(--theme-color);
       border-radius: 20px;
       position: relative;
-      overflow: hidden; /* はみ出し防止 */
+      overflow: hidden;
       box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      touch-action: none; /* ボード内でのスクロール防止 */
+      touch-action: none;
     }
 
-    /* SVGレイヤー（線を描画） */
+    /* SVGレイヤー */
     #linesSvg {
       width: 100%;
       height: 100%;
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 0; /* キャラより下 */
-      pointer-events: none; /* クリックを透過 */
+      z-index: 0;
+      pointer-events: none;
     }
 
     /* キャラクターアイコン */
     .char-node {
       position: absolute;
-      width: 80px;
+      width: 80px; /* 初期サイズ */
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -152,8 +165,8 @@
     .char-node:active { cursor: grabbing; z-index: 20; }
 
     .char-img-box {
-      width: 70px;
-      height: 70px;
+      width: 100%;
+      padding-top: 100%; /* 正方形維持 */
       border-radius: 50%;
       border: 3px solid #fff;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -162,28 +175,29 @@
       position: relative;
     }
     .char-img-box img {
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
       object-fit: cover;
     }
     
-    /* 削除ボタン（キャラ選択時のみ表示などの制御も可だが今回は簡易的に常時右上に） */
     .btn-delete-char {
       position: absolute;
-      top: -5px;
+      top: 0;
       right: 0;
       background: #ff6b6b;
       color: white;
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       border-radius: 50%;
       text-align: center;
-      line-height: 20px;
-      font-size: 12px;
+      line-height: 24px;
+      font-size: 14px;
       cursor: pointer;
-      display: none; /* デフォルト非表示 */
+      display: none;
+      z-index: 5;
     }
-    .char-node:hover .btn-delete-char { display: block; } /* ホバーで表示 */
+    .char-node:hover .btn-delete-char { display: block; }
 
     .char-name {
       background: rgba(255,255,255,0.9);
@@ -193,10 +207,11 @@
       margin-top: 5px;
       font-weight: bold;
       border: 1px solid #eee;
-      max-width: 100%;
+      max-width: 150%; /* 名前が長くてもある程度許容 */
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      text-align: center;
     }
 
     /* 線上のラベル */
@@ -209,14 +224,14 @@
       border-radius: 10px;
       font-size: 0.75rem;
       font-weight: bold;
-      transform: translate(-50%, -50%); /* 中心に配置 */
+      transform: translate(-50%, -50%);
       z-index: 5;
       white-space: nowrap;
       cursor: pointer;
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    /* 関係追加モーダル */
+    /* モーダル */
     #relationModal {
       display: none;
       position: fixed;
@@ -234,16 +249,29 @@
       max-width: 350px;
       text-align: center;
     }
-    .modal-content h3 { color: var(--theme-color); margin-top: 0; }
     .modal-input {
       width: 100%; margin-bottom: 10px; padding: 8px;
       border: 2px solid #eee; border-radius: 8px; box-sizing: border-box;
     }
     .preset-btns {
-      display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px;
+      display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-bottom: 15px;
     }
     .preset-btn {
       background: #f0f0f0; border: none; padding: 5px 10px; border-radius: 15px; cursor: pointer; font-size: 0.8rem;
+    }
+    
+    /* 矢印チェックボックス */
+    .checkbox-wrapper {
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    .checkbox-wrapper input {
+      width: 18px; height: 18px; cursor: pointer;
     }
 
     /* 保存・共有エリア */
@@ -280,7 +308,7 @@
     /* 選択中のスタイル */
     .char-node.selected .char-img-box {
       border-color: #5a96ff;
-      box-shadow: 0 0 10px #5a96ff;
+      box-shadow: 0 0 15px rgba(90, 150, 255, 0.6);
     }
 
   </style>
@@ -301,23 +329,32 @@
       <i class="fa-solid fa-link"></i> 関係を結ぶ
     </button>
 
-    <!-- 背景色 -->
-    <div style="display:flex; align-items:center; gap:5px; font-size:0.9rem;">
-      背景: <input type="color" id="bgColorPicker" value="#ffffff" onchange="changeBoardColor(this.value)" style="width:30px; height:30px; border:none; cursor:pointer;">
+    <!-- サイズ変更スライダー（選択時のみ有効） -->
+    <div class="control-group">
+      <i class="fa-solid fa-up-right-and-down-left-from-center" style="font-size:0.8rem; color:#888;"></i>
+      <input type="range" id="sizeSlider" min="50" max="200" value="80" disabled oninput="changeCharSize(this.value)">
     </div>
 
-    <button class="btn btn-reset" onclick="resetBoard()"><i class="fa-solid fa-trash"></i> リセット</button>
+    <!-- 背景色 -->
+    <div class="control-group" style="font-size:0.8rem;">
+      背景
+      <input type="color" id="bgColorPicker" value="#ffffff" onchange="changeBoardColor(this.value)" style="width:25px; height:25px; border:none; cursor:pointer;">
+    </div>
+
+    <button class="btn btn-reset" onclick="resetBoard()"><i class="fa-solid fa-trash"></i></button>
   </div>
 
   <div style="font-size:0.8rem; margin-bottom:5px; color:#888;">
-    ※キャラをドラッグで移動、タップで名前変更できます
+    ※キャラをタップするとサイズ変更できます
   </div>
 
   <!-- 相関図ボード -->
   <div id="boardContainer">
-    <!-- 線を描画するSVGレイヤー -->
-    <svg id="linesSvg"></svg>
-    <!-- ここにキャラ(div)が追加される -->
+    <!-- SVGレイヤー -->
+    <svg id="linesSvg">
+      <defs></defs> <!-- マーカー定義用 -->
+    </svg>
+    <!-- キャラクター配置エリア -->
   </div>
 
   <!-- 保存・共有 -->
@@ -337,16 +374,22 @@
     <div class="modal-content">
       <h3>関係性を入力</h3>
       <input type="text" id="relationText" class="modal-input" placeholder="例：親友、ライバル">
+      
       <div class="preset-btns">
         <button class="preset-btn" onclick="setInput('親友')">親友</button>
         <button class="preset-btn" onclick="setInput('恋人')">恋人</button>
         <button class="preset-btn" onclick="setInput('犬猿')">犬猿</button>
-        <button class="preset-btn" onclick="setInput('相棒')">相棒</button>
         <button class="preset-btn" onclick="setInput('家族')">家族</button>
         <button class="preset-btn" onclick="setInput('片思い')">片思い</button>
       </div>
+
+      <div class="checkbox-wrapper">
+        <input type="checkbox" id="arrowCheck">
+        <label for="arrowCheck">矢印をつける (一方通行)</label>
+      </div>
+
       <label style="font-size:0.9rem; font-weight:bold;">線の色：</label>
-      <input type="color" id="lineColorInput" value="#ffb7c5" style="width:100%; height:40px; margin-bottom:10px; cursor:pointer;">
+      <input type="color" id="lineColorInput" value="#ffb7c5" style="width:100%; height:40px; margin-bottom:15px; cursor:pointer;">
       
       <div style="display:flex; justify-content:center; gap:10px;">
         <button class="btn btn-add" onclick="confirmRelation()">決定</button>
@@ -370,16 +413,18 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
     /* === 基本設定 === */
-    let characters = []; // { id, x, y, name, img }
-    let relationships = []; // { id, fromId, toId, text, color }
+    let characters = []; // { id, element }
+    let relationships = []; // { id, fromId, toId, text, color, isArrow, markerId }
     let charIdCounter = 0;
     let lineIdCounter = 0;
     
     let isLineMode = false;
-    let selectedCharId = null; // 線結び用
+    let selectedCharId = null; // 線結び・サイズ変更用
 
     const board = document.getElementById('boardContainer');
     const svg = document.getElementById('linesSvg');
+    const defs = svg.querySelector('defs');
+    const sizeSlider = document.getElementById('sizeSlider');
 
     /* === キャラ追加機能 === */
     function addCharacter(input) {
@@ -389,7 +434,7 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         createCharacterNode(e.target.result);
-        input.value = ''; // リセット
+        input.value = ''; 
       };
       reader.readAsDataURL(file);
     }
@@ -398,31 +443,28 @@
       charIdCounter++;
       const id = `char-${charIdCounter}`;
       
-      // ランダムな初期位置（ボード内）
       const x = Math.random() * (board.clientWidth - 100);
       const y = Math.random() * (board.clientHeight - 100);
 
-      // DOM作成
       const node = document.createElement('div');
       node.className = 'char-node';
       node.id = id;
       node.style.left = x + 'px';
       node.style.top = y + 'px';
+      // 初期サイズ
+      node.style.width = '80px'; 
       
-      // 削除ボタン
       const delBtn = document.createElement('div');
       delBtn.className = 'btn-delete-char';
       delBtn.innerText = '×';
       delBtn.onclick = (ev) => { ev.stopPropagation(); deleteCharacter(id); };
 
-      // 画像ボックス
       const imgBox = document.createElement('div');
       imgBox.className = 'char-img-box';
       const img = document.createElement('img');
       img.src = imgSrc;
       imgBox.appendChild(img);
 
-      // 名前ラベル
       const nameLabel = document.createElement('div');
       nameLabel.className = 'char-name';
       nameLabel.innerText = '名前入力';
@@ -439,13 +481,11 @@
       node.appendChild(nameLabel);
       board.appendChild(node);
 
-      // データ保存
       characters.push({ id, element: node });
 
-      // ドラッグイベント設定
       setupDraggable(node);
       
-      // クリックイベント（線結び用）
+      // クリックイベント（選択・線結び）
       node.addEventListener('click', () => handleCharClick(id));
     }
 
@@ -453,66 +493,61 @@
     function deleteCharacter(id) {
       const index = characters.findIndex(c => c.id === id);
       if (index > -1) {
-        // DOM削除
         characters[index].element.remove();
         characters.splice(index, 1);
         
-        // 関連する線も削除
-        relationships = relationships.filter(r => {
-          if (r.fromId === id || r.toId === id) {
-            document.getElementById(r.id)?.remove(); // SVG線削除
-            document.getElementById('label-' + r.id)?.remove(); // ラベル削除
-            return false;
-          }
-          return true;
-        });
+        // 関連する線を削除
+        const relatedLines = relationships.filter(r => r.fromId === id || r.toId === id);
+        relatedLines.forEach(r => deleteLine(r.id));
+      }
+      if (selectedCharId === id) {
+        selectedCharId = null;
+        sizeSlider.disabled = true;
       }
     }
 
-    /* === ドラッグ移動機能 (PC/スマホ両対応) === */
+    /* === サイズ変更機能 === */
+    function changeCharSize(val) {
+      if (!selectedCharId) return;
+      const el = document.getElementById(selectedCharId);
+      if (el) {
+        el.style.width = val + 'px';
+        updateLines(); // 線も再計算
+      }
+    }
+
+    /* === ドラッグ移動機能 === */
     function setupDraggable(el) {
       let isDragging = false;
       let startX, startY, initialLeft, initialTop;
 
       const startDrag = (e) => {
-        if(isLineMode) return; // 線モード中はドラッグ不可
+        if(isLineMode) return;
         isDragging = true;
-        
         const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-        
         startX = clientX;
         startY = clientY;
         initialLeft = parseFloat(el.style.left || 0);
         initialTop = parseFloat(el.style.top || 0);
-        
-        // Z-indexを上げて最前面に
         el.style.zIndex = 100;
       };
 
       const doDrag = (e) => {
         if (!isDragging) return;
-        e.preventDefault(); // スクロール防止
-
+        e.preventDefault();
         const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
         const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
-
         const dx = clientX - startX;
         const dy = clientY - startY;
-
         let newLeft = initialLeft + dx;
         let newTop = initialTop + dy;
-
-        // 枠外にはみ出さない制限
         const maxW = board.clientWidth - el.offsetWidth;
         const maxH = board.clientHeight - el.offsetHeight;
         newLeft = Math.max(0, Math.min(newLeft, maxW));
         newTop = Math.max(0, Math.min(newTop, maxH));
-
         el.style.left = newLeft + 'px';
         el.style.top = newTop + 'px';
-
-        // 線の再描画
         updateLines();
       };
 
@@ -523,62 +558,74 @@
 
       el.addEventListener('mousedown', startDrag);
       el.addEventListener('touchstart', startDrag, {passive: false});
-      
       window.addEventListener('mousemove', doDrag);
       window.addEventListener('touchmove', doDrag, {passive: false});
-      
       window.addEventListener('mouseup', stopDrag);
       window.addEventListener('touchend', stopDrag);
     }
 
-    /* === 線結び機能 === */
+    /* === 線結び & 選択機能 === */
     function toggleLineMode() {
       isLineMode = !isLineMode;
       const btn = document.getElementById('lineModeBtn');
+      deselectAll(); // モード切替時に選択解除
+
       if (isLineMode) {
         btn.classList.add('active');
         btn.innerHTML = '<i class="fa-solid fa-check"></i> 終了';
-        selectedCharId = null;
+        sizeSlider.disabled = true; // 線モード中はサイズ変更不可
       } else {
         btn.classList.remove('active');
         btn.innerHTML = '<i class="fa-solid fa-link"></i> 関係を結ぶ';
-        // 選択解除
-        if(selectedCharId) {
-          document.getElementById(selectedCharId).classList.remove('selected');
-          selectedCharId = null;
-        }
       }
+    }
+
+    function deselectAll() {
+      if (selectedCharId) {
+        document.getElementById(selectedCharId)?.classList.remove('selected');
+        selectedCharId = null;
+      }
+      sizeSlider.disabled = true;
     }
 
     let tempFromId = null;
     let tempToId = null;
 
     function handleCharClick(id) {
-      if (!isLineMode) return;
-
       const el = document.getElementById(id);
 
-      if (!selectedCharId) {
-        // 1人目選択
+      if (isLineMode) {
+        // --- 線結びモード ---
+        if (!selectedCharId) {
+          // 1人目
+          selectedCharId = id;
+          el.classList.add('selected');
+        } else {
+          // 2人目
+          if (selectedCharId !== id) {
+            tempFromId = selectedCharId;
+            tempToId = id;
+            document.getElementById(selectedCharId).classList.remove('selected');
+            selectedCharId = null;
+            openModal();
+          } else {
+            // キャンセル
+            el.classList.remove('selected');
+            selectedCharId = null;
+          }
+        }
+      } else {
+        // --- 通常モード（サイズ変更用選択） ---
+        if (selectedCharId) {
+          document.getElementById(selectedCharId).classList.remove('selected');
+        }
         selectedCharId = id;
         el.classList.add('selected');
-      } else {
-        // 2人目選択（自分自身以外）
-        if (selectedCharId !== id) {
-          tempFromId = selectedCharId;
-          tempToId = id;
-          
-          // 選択解除
-          document.getElementById(selectedCharId).classList.remove('selected');
-          selectedCharId = null;
-
-          // モーダルを開く
-          openModal();
-        } else {
-          // キャンセル（自分をクリック）
-          el.classList.remove('selected');
-          selectedCharId = null;
-        }
+        
+        // スライダーをこのキャラのサイズに合わせる
+        const currentWidth = parseFloat(el.style.width);
+        sizeSlider.value = currentWidth;
+        sizeSlider.disabled = false;
       }
     }
 
@@ -586,9 +633,11 @@
     const modal = document.getElementById('relationModal');
     const relationInput = document.getElementById('relationText');
     const colorInput = document.getElementById('lineColorInput');
+    const arrowCheck = document.getElementById('arrowCheck');
 
     function openModal() {
       relationInput.value = '';
+      arrowCheck.checked = false;
       modal.style.display = 'flex';
     }
     
@@ -605,24 +654,48 @@
     function confirmRelation() {
       const text = relationInput.value || '関係';
       const color = colorInput.value;
-      createLine(tempFromId, tempToId, text, color);
+      const isArrow = arrowCheck.checked;
+      createLine(tempFromId, tempToId, text, color, isArrow);
       closeModal();
     }
 
     /* === 線の描画・管理 === */
-    function createLine(fromId, toId, text, color) {
+    function createLine(fromId, toId, text, color, isArrow) {
       lineIdCounter++;
       const id = `line-${lineIdCounter}`;
+      const markerId = `marker-${lineIdCounter}`;
 
-      // SVG線作成
+      // 矢印用マーカー作成（defsに追加）
+      if (isArrow) {
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', markerId);
+        marker.setAttribute('viewBox', '0 0 10 10');
+        marker.setAttribute('refX', '9'); // 線の先端
+        marker.setAttribute('refY', '5');
+        marker.setAttribute('markerWidth', '6');
+        marker.setAttribute('markerHeight', '6');
+        marker.setAttribute('orient', 'auto');
+        
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+        path.setAttribute('fill', color);
+        
+        marker.appendChild(path);
+        defs.appendChild(marker);
+      }
+
+      // 線作成
       const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
       line.setAttribute('id', id);
       line.setAttribute('stroke', color);
       line.setAttribute('stroke-width', '3');
       line.setAttribute('stroke-linecap', 'round');
+      if (isArrow) {
+        line.setAttribute('marker-end', `url(#${markerId})`);
+      }
       svg.appendChild(line);
 
-      // ラベル作成（HTML要素）
+      // ラベル作成
       const label = document.createElement('div');
       label.className = 'relation-label';
       label.id = 'label-' + id;
@@ -630,7 +703,6 @@
       label.style.borderColor = color;
       label.style.color = color;
       
-      // ラベルクリックで削除
       label.onclick = () => {
         if(confirm('この関係を削除しますか？')) {
           deleteLine(id);
@@ -639,40 +711,68 @@
       
       board.appendChild(label);
 
-      relationships.push({ id, fromId, toId, text, color, lineEl: line, labelEl: label });
+      relationships.push({ id, fromId, toId, text, color, isArrow, markerId, lineEl: line, labelEl: label });
       updateLines();
     }
 
     function deleteLine(id) {
       const index = relationships.findIndex(r => r.id === id);
       if(index > -1) {
-        document.getElementById(id).remove();
-        document.getElementById('label-' + id).remove();
+        const rel = relationships[index];
+        rel.lineEl.remove();
+        rel.labelEl.remove();
+        // マーカーも削除
+        if(rel.isArrow) {
+          const m = document.getElementById(rel.markerId);
+          if(m) m.remove();
+        }
         relationships.splice(index, 1);
       }
     }
 
+    // 線の位置計算（超重要：アイコンのフチで止める）
     function updateLines() {
       relationships.forEach(rel => {
         const fromEl = document.getElementById(rel.fromId);
         const toEl = document.getElementById(rel.toId);
         if (!fromEl || !toEl) return;
 
-        // 中心の座標を計算
-        const x1 = fromEl.offsetLeft + fromEl.offsetWidth / 2;
-        const y1 = fromEl.offsetTop + fromEl.offsetHeight / 2;
-        const x2 = toEl.offsetLeft + toEl.offsetWidth / 2;
-        const y2 = toEl.offsetTop + toEl.offsetHeight / 2;
+        // アイコンの中心座標
+        const x1_c = fromEl.offsetLeft + fromEl.offsetWidth / 2;
+        const y1_c = fromEl.offsetTop + fromEl.offsetHeight / 2;
+        const x2_c = toEl.offsetLeft + toEl.offsetWidth / 2;
+        const y2_c = toEl.offsetTop + toEl.offsetHeight / 2;
+
+        // アイコンの半径（画像部分は正方形なので幅の半分）
+        // 実際には char-img-box は width:100% なので char-node の width/2 が半径
+        const r1 = fromEl.offsetWidth / 2;
+        const r2 = toEl.offsetWidth / 2;
+
+        // ベクトル計算
+        const dx = x2_c - x1_c;
+        const dy = y2_c - y1_c;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist === 0) return; // 重なってる場合
+
+        // 始点と終点を半径分ずらす（アイコンのフチに合わせる）
+        // 矢印がある場合、終点は半径+矢印の大きさ分少し余裕を持たせる
+        const offset2 = rel.isArrow ? r2 + 5 : r2; 
+
+        const startX = x1_c + (dx / dist) * r1;
+        const startY = y1_c + (dy / dist) * r1;
+        const endX = x2_c - (dx / dist) * offset2;
+        const endY = y2_c - (dy / dist) * offset2;
 
         // 線更新
-        rel.lineEl.setAttribute('x1', x1);
-        rel.lineEl.setAttribute('y1', y1);
-        rel.lineEl.setAttribute('x2', x2);
-        rel.lineEl.setAttribute('y2', y2);
+        rel.lineEl.setAttribute('x1', startX);
+        rel.lineEl.setAttribute('y1', startY);
+        rel.lineEl.setAttribute('x2', endX);
+        rel.lineEl.setAttribute('y2', endY);
 
         // ラベル位置更新（中点）
-        rel.labelEl.style.left = (x1 + x2) / 2 + 'px';
-        rel.labelEl.style.top = (y1 + y2) / 2 + 'px';
+        rel.labelEl.style.left = (startX + endX) / 2 + 'px';
+        rel.labelEl.style.top = (startY + endY) / 2 + 'px';
       });
     }
 
@@ -683,13 +783,27 @@
 
     function resetBoard() {
       if(!confirm('全てリセットしますか？')) return;
-      board.innerHTML = '<svg id="linesSvg"></svg>'; // SVG再生成
+      // SVGの中身（線とマーカー）をクリア
+      while (svg.lastChild) {
+        svg.removeChild(svg.lastChild);
+      }
+      // defsを再生成
+      const newDefs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      svg.appendChild(newDefs);
+
+      // キャラ削除
+      characters.forEach(c => c.element.remove());
+      // ラベル削除
+      relationships.forEach(r => r.labelEl.remove());
+
       characters = [];
       relationships = [];
       charIdCounter = 0;
       lineIdCounter = 0;
       isLineMode = false;
+      selectedCharId = null;
       document.getElementById('lineModeBtn').classList.remove('active');
+      document.getElementById('lineModeBtn').innerHTML = '<i class="fa-solid fa-link"></i> 関係を結ぶ';
     }
 
     /* === 保存・共有 === */
@@ -697,8 +811,11 @@
       const btn = document.getElementById('btn-save');
       const originalText = btn.innerHTML;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 作成中...';
+      
+      // 選択状態の枠を一時的に消す
+      const selected = document.querySelector('.selected');
+      if(selected) selected.classList.remove('selected');
 
-      // html2canvasの設定（SVG対応のため）
       html2canvas(document.getElementById('boardContainer'), {
         scale: 2,
         backgroundColor: null
@@ -728,6 +845,7 @@
           link.click();
         }
         btn.innerHTML = originalText;
+        if(selected) selected.classList.add('selected'); // 選択戻す
       });
     }
 
