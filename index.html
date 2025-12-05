@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>オリキャラ相関図メーカー</title>
+  <!-- SEO -->
+  <meta name="description" content="オリキャラの関係性を図にしよう！画像を自由に配置して線で繋げる相関図メーカー♡">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <!-- OGP -->
+  <meta property="og:title" content="オリキャラ相関図メーカー">
+  <meta property="og:description" content="うちの子の関係性を可視化！自由に配置して繋げる相関図ツール♡">
+  <meta property="og:type" content="website">
+  <!-- ↓ URL変更してね -->
+  <meta property="og:url" content="https://mofu-mitsu.github.io/orikyara-relationship-chart/">
+  <meta property="og:image" content="https://mofu-mitsu.github.io/orikyara-relationship-chart/ogp.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- ファビコン -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💞</text></svg>">
+
+  <!-- フォント・アイコン -->
+  <link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root {
+      --theme-color: #ff9a9e;
+      --bg-color: #fff9fb;
+      --board-color: #ffffff;
+    }
+
+    body {
+      font-family: 'Zen Maru Gothic', sans-serif;
+      margin: 0;
+      padding: 0;
+      padding-bottom: 120px;
+      background-color: var(--bg-color);
+      /* 方眼紙っぽい背景 */
+      background-image: 
+        linear-gradient(rgba(255, 154, 158, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 154, 158, 0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: #555;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      touch-action: manipulation; /* スマホでの操作性向上 */
+    }
+
+    h1 {
+      text-align: center;
+      color: var(--theme-color);
+      margin-top: 30px;
+      font-size: 1.5rem;
+      background: #fff;
+      padding: 10px 25px;
+      border-radius: 50px;
+      border: 3px dashed var(--theme-color);
+      box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+    }
+
+    /* 操作パネル */
+    .controls {
+      width: 95%;
+      max-width: 800px;
+      background: #fff;
+      padding: 15px;
+      border-radius: 15px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 8px 15px;
+      border-radius: 20px;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      color: white;
+      transition: transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn:active { transform: scale(0.95); }
+
+    .btn-add { background: #ffb7c5; }
+    .btn-line { background: #a0c4ff; }
+    .btn-line.active { background: #5a96ff; box-shadow: inset 0 3px 5px rgba(0,0,0,0.2); }
+    .btn-reset { background: #ccc; font-size: 0.8rem; }
+
+    /* ファイル入力は隠してラベルで操作 */
+    #fileInput { display: none; }
+    .file-label {
+      background: #ffb7c5;
+      color: white;
+      padding: 8px 15px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .file-label:hover { opacity: 0.9; }
+
+    /* === 相関図ボードエリア === */
+    #boardContainer {
+      width: 95%;
+      max-width: 800px;
+      height: 600px; /* ボードの高さ */
+      background: var(--board-color);
+      border: 4px solid var(--theme-color);
+      border-radius: 20px;
+      position: relative;
+      overflow: hidden; /* はみ出し防止 */
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      touch-action: none; /* ボード内でのスクロール防止 */
+    }
+
+    /* SVGレイヤー（線を描画） */
+    #linesSvg {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0; /* キャラより下 */
+      pointer-events: none; /* クリックを透過 */
+    }
+
+    /* キャラクターアイコン */
+    .char-node {
+      position: absolute;
+      width: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: grab;
+      z-index: 10;
+      user-select: none;
+    }
+    .char-node:active { cursor: grabbing; z-index: 20; }
+
+    .char-img-box {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      overflow: hidden;
+      background: #eee;
+      position: relative;
+    }
+    .char-img-box img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    /* 削除ボタン（キャラ選択時のみ表示などの制御も可だが今回は簡易的に常時右上に） */
+    .btn-delete-char {
+      position: absolute;
+      top: -5px;
+      right: 0;
+      background: #ff6b6b;
+      color: white;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 20px;
+      font-size: 12px;
+      cursor: pointer;
+      display: none; /* デフォルト非表示 */
+    }
+    .char-node:hover .btn-delete-char { display: block; } /* ホバーで表示 */
+
+    .char-name {
+      background: rgba(255,255,255,0.9);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.8rem;
+      margin-top: 5px;
+      font-weight: bold;
+      border: 1px solid #eee;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 線上のラベル */
+    .relation-label {
+      position: absolute;
+      background: #fff;
+      border: 1px solid var(--theme-color);
+      color: var(--theme-color);
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      transform: translate(-50%, -50%); /* 中心に配置 */
+      z-index: 5;
+      white-space: nowrap;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* 関係追加モーダル */
+    #relationModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 350px;
+      text-align: center;
+    }
+    .modal-content h3 { color: var(--theme-color); margin-top: 0; }
+    .modal-input {
+      width: 100%; margin-bottom: 10px; padding: 8px;
+      border: 2px solid #eee; border-radius: 8px; box-sizing: border-box;
+    }
+    .preset-btns {
+      display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-bottom: 10px;
+    }
+    .preset-btn {
+      background: #f0f0f0; border: none; padding: 5px 10px; border-radius: 15px; cursor: pointer; font-size: 0.8rem;
+    }
+
+    /* 保存・共有エリア */
+    .save-share-area {
+      margin-top: 20px;
+      text-align: center;
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+    }
+    #longpressSaveArea { display: none; margin-top: 20px; text-align: center; }
+
+    /* フッター */
+    .ad-footer {
+      text-align: center;
+      padding: 20px;
+      background: #fff;
+      border-top: 3px dashed var(--theme-color);
+      margin-top: 40px;
+      width: 100%;
+    }
+    .footer-nav {
+      position: fixed;
+      bottom: 0; left: 0; width: 100%;
+      background: rgba(255,255,255,0.95);
+      padding: 12px;
+      text-align: center;
+      z-index: 999;
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      border-top: 2px solid var(--theme-color);
+    }
+    .footer-nav a { color: var(--theme-color); font-weight: bold; text-decoration: none; }
+
+    /* 選択中のスタイル */
+    .char-node.selected .char-img-box {
+      border-color: #5a96ff;
+      box-shadow: 0 0 10px #5a96ff;
+    }
+
+  </style>
+</head>
+<body>
+
+  <h1>🧩 オリキャラ相関図メーカー</h1>
+
+  <div class="controls">
+    <!-- 画像追加ボタン -->
+    <label class="file-label">
+      <input type="file" id="fileInput" accept="image/*" onchange="addCharacter(this)">
+      <i class="fa-solid fa-plus"></i> キャラ追加
+    </label>
+
+    <!-- 線引きモード切り替え -->
+    <button class="btn btn-line" id="lineModeBtn" onclick="toggleLineMode()">
+      <i class="fa-solid fa-link"></i> 関係を結ぶ
+    </button>
+
+    <!-- 背景色 -->
+    <div style="display:flex; align-items:center; gap:5px; font-size:0.9rem;">
+      背景: <input type="color" id="bgColorPicker" value="#ffffff" onchange="changeBoardColor(this.value)" style="width:30px; height:30px; border:none; cursor:pointer;">
+    </div>
+
+    <button class="btn btn-reset" onclick="resetBoard()"><i class="fa-solid fa-trash"></i> リセット</button>
+  </div>
+
+  <div style="font-size:0.8rem; margin-bottom:5px; color:#888;">
+    ※キャラをドラッグで移動、タップで名前変更できます
+  </div>
+
+  <!-- 相関図ボード -->
+  <div id="boardContainer">
+    <!-- 線を描画するSVGレイヤー -->
+    <svg id="linesSvg"></svg>
+    <!-- ここにキャラ(div)が追加される -->
+  </div>
+
+  <!-- 保存・共有 -->
+  <div class="save-share-area">
+    <button class="btn btn-add" id="btn-save" onclick="saveImage()">
+      <i class="fa-solid fa-camera"></i> 画像保存
+    </button>
+    <button class="btn" style="background:#555;" onclick="nativeShare()">
+      <i class="fa-solid fa-share-nodes"></i> 共有
+    </button>
+  </div>
+
+  <div id="longpressSaveArea"></div>
+
+  <!-- 関係入力モーダル -->
+  <div id="relationModal">
+    <div class="modal-content">
+      <h3>関係性を入力</h3>
+      <input type="text" id="relationText" class="modal-input" placeholder="例：親友、ライバル">
+      <div class="preset-btns">
+        <button class="preset-btn" onclick="setInput('親友')">親友</button>
+        <button class="preset-btn" onclick="setInput('恋人')">恋人</button>
+        <button class="preset-btn" onclick="setInput('犬猿')">犬猿</button>
+        <button class="preset-btn" onclick="setInput('相棒')">相棒</button>
+        <button class="preset-btn" onclick="setInput('家族')">家族</button>
+        <button class="preset-btn" onclick="setInput('片思い')">片思い</button>
+      </div>
+      <label style="font-size:0.9rem; font-weight:bold;">線の色：</label>
+      <input type="color" id="lineColorInput" value="#ffb7c5" style="width:100%; height:40px; margin-bottom:10px; cursor:pointer;">
+      
+      <div style="display:flex; justify-content:center; gap:10px;">
+        <button class="btn btn-add" onclick="confirmRelation()">決定</button>
+        <button class="btn btn-reset" onclick="closeModal()">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- フッター -->
+  <footer class="ad-footer">
+    <p style="color:var(--theme-color); font-weight:bold; margin-bottom:10px;">♡ 創作のお供に ♡</p>
+    <div style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+      <script type="text/javascript">rakuten_design="slide";rakuten_affiliateId="47f67ba0.34b43d0d.47f67ba1.f8c0f51e";rakuten_items="ctsmatch";rakuten_genreId="0";rakuten_size="468x160";rakuten_target="_blank";rakuten_theme="gray";rakuten_border="off";rakuten_auto_mode="on";rakuten_genre_title="off";rakuten_recommend="on";rakuten_ts="1764908023168";</script><script type="text/javascript" src="https://xml.affiliate.rakuten.co.jp/widget/js/rakuten_widget.js?20230106"></script>
+    </div>
+  </footer>
+
+  <div class="footer-nav">
+    <a href="https://mofu-mitsu.github.io/">TOPへ戻る</a>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script>
+    /* === 基本設定 === */
+    let characters = []; // { id, x, y, name, img }
+    let relationships = []; // { id, fromId, toId, text, color }
+    let charIdCounter = 0;
+    let lineIdCounter = 0;
+    
+    let isLineMode = false;
+    let selectedCharId = null; // 線結び用
+
+    const board = document.getElementById('boardContainer');
+    const svg = document.getElementById('linesSvg');
+
+    /* === キャラ追加機能 === */
+    function addCharacter(input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        createCharacterNode(e.target.result);
+        input.value = ''; // リセット
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function createCharacterNode(imgSrc) {
+      charIdCounter++;
+      const id = `char-${charIdCounter}`;
+      
+      // ランダムな初期位置（ボード内）
+      const x = Math.random() * (board.clientWidth - 100);
+      const y = Math.random() * (board.clientHeight - 100);
+
+      // DOM作成
+      const node = document.createElement('div');
+      node.className = 'char-node';
+      node.id = id;
+      node.style.left = x + 'px';
+      node.style.top = y + 'px';
+      
+      // 削除ボタン
+      const delBtn = document.createElement('div');
+      delBtn.className = 'btn-delete-char';
+      delBtn.innerText = '×';
+      delBtn.onclick = (ev) => { ev.stopPropagation(); deleteCharacter(id); };
+
+      // 画像ボックス
+      const imgBox = document.createElement('div');
+      imgBox.className = 'char-img-box';
+      const img = document.createElement('img');
+      img.src = imgSrc;
+      imgBox.appendChild(img);
+
+      // 名前ラベル
+      const nameLabel = document.createElement('div');
+      nameLabel.className = 'char-name';
+      nameLabel.innerText = '名前入力';
+      nameLabel.onclick = (ev) => {
+        ev.stopPropagation();
+        if(!isLineMode) {
+          const newName = prompt("キャラの名前を入力してね", nameLabel.innerText);
+          if(newName) nameLabel.innerText = newName;
+        }
+      };
+
+      node.appendChild(delBtn);
+      node.appendChild(imgBox);
+      node.appendChild(nameLabel);
+      board.appendChild(node);
+
+      // データ保存
+      characters.push({ id, element: node });
+
+      // ドラッグイベント設定
+      setupDraggable(node);
+      
+      // クリックイベント（線結び用）
+      node.addEventListener('click', () => handleCharClick(id));
+    }
+
+    /* === 削除機能 === */
+    function deleteCharacter(id) {
+      const index = characters.findIndex(c => c.id === id);
+      if (index > -1) {
+        // DOM削除
+        characters[index].element.remove();
+        characters.splice(index, 1);
+        
+        // 関連する線も削除
+        relationships = relationships.filter(r => {
+          if (r.fromId === id || r.toId === id) {
+            document.getElementById(r.id)?.remove(); // SVG線削除
+            document.getElementById('label-' + r.id)?.remove(); // ラベル削除
+            return false;
+          }
+          return true;
+        });
+      }
+    }
+
+    /* === ドラッグ移動機能 (PC/スマホ両対応) === */
+    function setupDraggable(el) {
+      let isDragging = false;
+      let startX, startY, initialLeft, initialTop;
+
+      const startDrag = (e) => {
+        if(isLineMode) return; // 線モード中はドラッグ不可
+        isDragging = true;
+        
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+        
+        startX = clientX;
+        startY = clientY;
+        initialLeft = parseFloat(el.style.left || 0);
+        initialTop = parseFloat(el.style.top || 0);
+        
+        // Z-indexを上げて最前面に
+        el.style.zIndex = 100;
+      };
+
+      const doDrag = (e) => {
+        if (!isDragging) return;
+        e.preventDefault(); // スクロール防止
+
+        const clientX = e.type.includes('touch') ? e.touches[0].clientX : e.clientX;
+        const clientY = e.type.includes('touch') ? e.touches[0].clientY : e.clientY;
+
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        let newLeft = initialLeft + dx;
+        let newTop = initialTop + dy;
+
+        // 枠外にはみ出さない制限
+        const maxW = board.clientWidth - el.offsetWidth;
+        const maxH = board.clientHeight - el.offsetHeight;
+        newLeft = Math.max(0, Math.min(newLeft, maxW));
+        newTop = Math.max(0, Math.min(newTop, maxH));
+
+        el.style.left = newLeft + 'px';
+        el.style.top = newTop + 'px';
+
+        // 線の再描画
+        updateLines();
+      };
+
+      const stopDrag = () => {
+        isDragging = false;
+        el.style.zIndex = '';
+      };
+
+      el.addEventListener('mousedown', startDrag);
+      el.addEventListener('touchstart', startDrag, {passive: false});
+      
+      window.addEventListener('mousemove', doDrag);
+      window.addEventListener('touchmove', doDrag, {passive: false});
+      
+      window.addEventListener('mouseup', stopDrag);
+      window.addEventListener('touchend', stopDrag);
+    }
+
+    /* === 線結び機能 === */
+    function toggleLineMode() {
+      isLineMode = !isLineMode;
+      const btn = document.getElementById('lineModeBtn');
+      if (isLineMode) {
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> 終了';
+        selectedCharId = null;
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="fa-solid fa-link"></i> 関係を結ぶ';
+        // 選択解除
+        if(selectedCharId) {
+          document.getElementById(selectedCharId).classList.remove('selected');
+          selectedCharId = null;
+        }
+      }
+    }
+
+    let tempFromId = null;
+    let tempToId = null;
+
+    function handleCharClick(id) {
+      if (!isLineMode) return;
+
+      const el = document.getElementById(id);
+
+      if (!selectedCharId) {
+        // 1人目選択
+        selectedCharId = id;
+        el.classList.add('selected');
+      } else {
+        // 2人目選択（自分自身以外）
+        if (selectedCharId !== id) {
+          tempFromId = selectedCharId;
+          tempToId = id;
+          
+          // 選択解除
+          document.getElementById(selectedCharId).classList.remove('selected');
+          selectedCharId = null;
+
+          // モーダルを開く
+          openModal();
+        } else {
+          // キャンセル（自分をクリック）
+          el.classList.remove('selected');
+          selectedCharId = null;
+        }
+      }
+    }
+
+    /* === モーダル関連 === */
+    const modal = document.getElementById('relationModal');
+    const relationInput = document.getElementById('relationText');
+    const colorInput = document.getElementById('lineColorInput');
+
+    function openModal() {
+      relationInput.value = '';
+      modal.style.display = 'flex';
+    }
+    
+    function closeModal() {
+      modal.style.display = 'none';
+      tempFromId = null;
+      tempToId = null;
+    }
+
+    function setInput(text) {
+      relationInput.value = text;
+    }
+
+    function confirmRelation() {
+      const text = relationInput.value || '関係';
+      const color = colorInput.value;
+      createLine(tempFromId, tempToId, text, color);
+      closeModal();
+    }
+
+    /* === 線の描画・管理 === */
+    function createLine(fromId, toId, text, color) {
+      lineIdCounter++;
+      const id = `line-${lineIdCounter}`;
+
+      // SVG線作成
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('id', id);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', '3');
+      line.setAttribute('stroke-linecap', 'round');
+      svg.appendChild(line);
+
+      // ラベル作成（HTML要素）
+      const label = document.createElement('div');
+      label.className = 'relation-label';
+      label.id = 'label-' + id;
+      label.innerText = text;
+      label.style.borderColor = color;
+      label.style.color = color;
+      
+      // ラベルクリックで削除
+      label.onclick = () => {
+        if(confirm('この関係を削除しますか？')) {
+          deleteLine(id);
+        }
+      };
+      
+      board.appendChild(label);
+
+      relationships.push({ id, fromId, toId, text, color, lineEl: line, labelEl: label });
+      updateLines();
+    }
+
+    function deleteLine(id) {
+      const index = relationships.findIndex(r => r.id === id);
+      if(index > -1) {
+        document.getElementById(id).remove();
+        document.getElementById('label-' + id).remove();
+        relationships.splice(index, 1);
+      }
+    }
+
+    function updateLines() {
+      relationships.forEach(rel => {
+        const fromEl = document.getElementById(rel.fromId);
+        const toEl = document.getElementById(rel.toId);
+        if (!fromEl || !toEl) return;
+
+        // 中心の座標を計算
+        const x1 = fromEl.offsetLeft + fromEl.offsetWidth / 2;
+        const y1 = fromEl.offsetTop + fromEl.offsetHeight / 2;
+        const x2 = toEl.offsetLeft + toEl.offsetWidth / 2;
+        const y2 = toEl.offsetTop + toEl.offsetHeight / 2;
+
+        // 線更新
+        rel.lineEl.setAttribute('x1', x1);
+        rel.lineEl.setAttribute('y1', y1);
+        rel.lineEl.setAttribute('x2', x2);
+        rel.lineEl.setAttribute('y2', y2);
+
+        // ラベル位置更新（中点）
+        rel.labelEl.style.left = (x1 + x2) / 2 + 'px';
+        rel.labelEl.style.top = (y1 + y2) / 2 + 'px';
+      });
+    }
+
+    /* === その他機能 === */
+    function changeBoardColor(color) {
+      document.getElementById('boardContainer').style.background = color;
+    }
+
+    function resetBoard() {
+      if(!confirm('全てリセットしますか？')) return;
+      board.innerHTML = '<svg id="linesSvg"></svg>'; // SVG再生成
+      characters = [];
+      relationships = [];
+      charIdCounter = 0;
+      lineIdCounter = 0;
+      isLineMode = false;
+      document.getElementById('lineModeBtn').classList.remove('active');
+    }
+
+    /* === 保存・共有 === */
+    function saveImage() {
+      const btn = document.getElementById('btn-save');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 作成中...';
+
+      // html2canvasの設定（SVG対応のため）
+      html2canvas(document.getElementById('boardContainer'), {
+        scale: 2,
+        backgroundColor: null
+      }).then(canvas => {
+        const dataURL = canvas.toDataURL('image/png');
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+        if (isMobile) {
+          const area = document.getElementById('longpressSaveArea');
+          area.innerHTML = '';
+          const img = document.createElement('img');
+          img.src = dataURL;
+          img.style.width = '100%';
+          img.style.borderRadius = '10px';
+          img.style.boxShadow = '0 5px 15px rgba(0,0,0,0.1)';
+          const msg = document.createElement('p');
+          msg.innerHTML = '☝️ <strong>画像を長押しして保存</strong>してね！';
+          msg.style.color = '#ff9a9e';
+          area.appendChild(msg);
+          area.appendChild(img);
+          area.style.display = 'block';
+          area.scrollIntoView({behavior: 'smooth'});
+        } else {
+          const link = document.createElement('a');
+          link.href = dataURL;
+          link.download = `soukanzu-${Date.now()}.png`;
+          link.click();
+        }
+        btn.innerHTML = originalText;
+      });
+    }
+
+    function nativeShare() {
+      if (navigator.share) {
+        navigator.share({
+          title: 'オリキャラ相関図メーカー',
+          text: 'うちの子の関係性をまとめました！ #オリキャラ相関図メーカー',
+          url: location.href
+        });
+      } else {
+        alert('URLをコピーしました！');
+        navigator.clipboard.writeText(location.href);
+      }
+    }
+  </script>
+</body>
+</html>
