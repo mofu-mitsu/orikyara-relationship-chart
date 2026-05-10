@@ -551,7 +551,7 @@ function nativeShare() {
   if (navigator.share) {
     navigator.share({
       title: 'オリキャラ相関図メーカー',
-      text: 'うちの子の関係性をまとめました！ #オリキャラ相関図メーカー',
+      text: 'うちの子の関係性をまとめました！ #オリキャラ相関図メーカー #オリキャラ',
       url: location.href
     });
   } else {
