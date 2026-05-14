@@ -6,7 +6,6 @@ let lineIdCounter = 0;
 
 let isLineMode = false;
 let selectedCharId = null;
-// 👇 編集中の関係IDを保存する変数
 let editingRelationId = null;
 
 const board = document.getElementById('boardContainer');
@@ -33,7 +32,7 @@ function showToast(message) {
   setTimeout(() => { toast.remove(); }, 3000);
 }
 
-/* === カスタム確認モーダル (NEW!) === */
+/* === カスタム確認モーダル === */
 const confirmModal = document.getElementById('confirmModal');
 const confirmMessage = document.getElementById('confirmMessage');
 let confirmAction = null;
@@ -85,7 +84,6 @@ function createCharacterNode(imgSrc) {
   const delBtn = document.createElement('div');
   delBtn.className = 'btn-delete-char';
   delBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-  // 👇 キャラ削除時も確認モーダルを出すように変更！
   delBtn.onclick = (ev) => { 
     ev.stopPropagation(); 
     showConfirmModal("このキャラを削除する？", () => {
@@ -284,7 +282,7 @@ function handleCharClick(id) {
   }
 }
 
-/* === モーダル管理 (編集機能追加!) === */
+/* === モーダル管理 === */
 const relationModal = document.getElementById('relationModal');
 const nameModal = document.getElementById('nameModal');
 const relationInput = document.getElementById('relationText');
@@ -295,25 +293,22 @@ const relationModalTitle = document.getElementById('relationModalTitle');
 const deleteRelationBtn = document.getElementById('deleteRelationBtn');
 let targetNameId = null;
 
-// 👇 編集モード対応
 function openRelationModal(relId = null) {
   editingRelationId = relId;
 
   if (relId) {
-    // 編集モード
     const rel = relationships.find(r => r.id === relId);
     relationModalTitle.innerText = '関係を編集 ✏️';
     relationInput.value = rel.text;
     colorInput.value = rel.color;
     arrowCheck.checked = rel.isArrow;
-    deleteRelationBtn.style.display = 'block'; // 削除ボタン表示
+    deleteRelationBtn.style.display = 'block'; 
   } else {
-    // 新規作成モード
     relationModalTitle.innerText = '関係性を入力 🔗';
     relationInput.value = '';
     arrowCheck.checked = false;
     colorInput.value = '#ffb7c5';
-    deleteRelationBtn.style.display = 'none'; // 削除ボタン隠す
+    deleteRelationBtn.style.display = 'none'; 
   }
   relationModal.style.display = 'flex';
 }
@@ -323,14 +318,12 @@ document.getElementById('cancelRelationBtn').addEventListener('click', () => {
   tempFromId = null; tempToId = null; editingRelationId = null;
 });
 
-// 👇 決定ボタン（新規作成 or 上書き更新）
 document.getElementById('confirmRelationBtn').addEventListener('click', () => {
   const text = relationInput.value || '関係';
   const color = colorInput.value;
   const isArrow = arrowCheck.checked;
 
   if (editingRelationId) {
-    // 更新処理 (古いものを消して作り直すのが一番安全！)
     const rel = relationships.find(r => r.id === editingRelationId);
     const fId = rel.fromId;
     const tId = rel.toId;
@@ -338,7 +331,6 @@ document.getElementById('confirmRelationBtn').addEventListener('click', () => {
     createLine(fId, tId, text, color, isArrow);
     showToast("✏️ 関係を更新したよ！");
   } else {
-    // 新規作成
     createLine(tempFromId, tempToId, text, color, isArrow);
     tempFromId = null; tempToId = null;
     showToast("💞 関係を結んだよ！");
@@ -348,7 +340,6 @@ document.getElementById('confirmRelationBtn').addEventListener('click', () => {
   editingRelationId = null;
 });
 
-// 👇 削除ボタン
 document.getElementById('deleteRelationBtn').addEventListener('click', () => {
   showConfirmModal("この関係を削除する？", () => {
     deleteLine(editingRelationId);
@@ -385,7 +376,7 @@ document.getElementById('confirmNameBtn').addEventListener('click', () => {
   targetNameId = null;
 });
 
-/* === 線の描画・管理 === */
+/* === 線の描画・管理 (直線から曲線へ！) === */
 function createLine(fromId, toId, text, color, isArrow) {
   lineIdCounter++;
   const id = `line-${lineIdCounter}`;
@@ -401,18 +392,20 @@ function createLine(fromId, toId, text, color, isArrow) {
     marker.setAttribute('markerHeight', '6');
     marker.setAttribute('orient', 'auto'); 
     
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
-    path.setAttribute('fill', color);
-    marker.appendChild(path);
+    const pathMarker = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    pathMarker.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+    pathMarker.setAttribute('fill', color);
+    marker.appendChild(pathMarker);
     defs.appendChild(marker);
   }
 
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  // 👇 <line> じゃなくて <path> に変更！
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   line.setAttribute('id', id);
   line.setAttribute('stroke', color);
   line.setAttribute('stroke-width', '3');
   line.setAttribute('stroke-linecap', 'round');
+  line.setAttribute('fill', 'none'); // 👇 塗りつぶさないように設定
   if (isArrow) line.setAttribute('marker-end', `url(#${markerId})`);
   svg.appendChild(line);
 
@@ -423,7 +416,6 @@ function createLine(fromId, toId, text, color, isArrow) {
   label.style.borderColor = color;
   label.style.color = color;
   
-  // 👇 タップした時に「編集モーダル」を開くように変更！
   label.onclick = () => {
     openRelationModal(id);
   };
@@ -473,19 +465,36 @@ function updateLines() {
     const endX = x2_c - (dx / dist) * offset2;
     const endY = y2_c - (dy / dist) * offset2;
 
-    rel.lineEl.setAttribute('x1', startX);
-    rel.lineEl.setAttribute('y1', startY);
-    rel.lineEl.setAttribute('x2', endX);
-    rel.lineEl.setAttribute('y2', endY);
+    // 👇 ここから魔法の計算！(ベクトルの法線を出す)
+    // 線の真ん中を計算
+    const mx = (startX + endX) / 2;
+    const my = (startY + endY) / 2;
 
-    rel.labelEl.style.left = (startX + endX) / 2 + 'px';
-    rel.labelEl.style.top = (startY + endY) / 2 + 'px';
+    // 線の直角方向（法線）を計算
+    const nx = -dy / dist;
+    const ny = dx / dist;
+
+    // カーブのふくらみ具合（30pxくらい膨らませる）
+    const curveOffset = 30;
+    
+    // カーブの引っ張りポイント（制御点）
+    const cx = mx + nx * curveOffset;
+    const cy = my + ny * curveOffset;
+
+    // 👇 Q（二次ベジェ曲線）を使ってカーブを描く！
+    rel.lineEl.setAttribute('d', `M ${startX} ${startY} Q ${cx} ${cy} ${endX} ${endY}`);
+
+    // 👇 ラベルの位置も、カーブの膨らみの半分に合わせる
+    const labelX = mx + nx * (curveOffset / 2);
+    const labelY = my + ny * (curveOffset / 2);
+
+    rel.labelEl.style.left = labelX + 'px';
+    rel.labelEl.style.top = labelY + 'px';
   });
 }
 
 /* === その他機能 === */
 function resetBoard() {
-  // 👇 全リセットも可愛い確認モーダルに変更！
   showConfirmModal("ボードを全てリセットする？", () => {
     while (svg.lastChild) svg.removeChild(svg.lastChild);
     const newDefs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
